@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Agregator wiadomości z Podlasia i Polski." />
+  <title>Przegląd wiadomości</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="/">PRZEGLĄD<span>.</span></a>
+      <div class="header-meta">
+        <span id="current-date"></span>
+        <span class="status-dot" aria-hidden="true"></span>
+        <span>AKTUALIZOWANE AUTOMATYCZNIE</span>
+      </div>
+    </div>
+  </header>
+
+  <nav class="category-bar" aria-label="Kategorie">
+    <div class="category-inner">
+      <button class="category active" data-filter="all">Wszystkie</button>
+      <button class="category" data-filter="bialystok">Białystok</button>
+      <button class="category" data-filter="podlasie">Podlaskie</button>
+      <button class="category" data-filter="polska">Polska</button>
+      <button class="category" data-filter="swiat">Świat</button>
+      <button class="category" data-filter="sport">Sport</button>
+      <button class="category" data-filter="technologia">Technologia</button>
+      <button class="category" data-filter="nauka">Nauka</button>
+      <button class="category" data-filter="kultura">Kultura</button>
+      <button class="category" data-filter="zdrowie">Zdrowie</button>
+    </div>
+  </nav>
+
+  <div class="ticker">
+    <div class="ticker-label">WIADOMOŚCI</div>
+    <div class="ticker-text" id="ticker-text">Pobieranie najnowszych nagłówków…</div>
+  </div>
+
+  <main class="page">
+    <section class="hero-shell" aria-label="Najnowsze wiadomości">
+      <a id="hero" class="hero" href="#" target="_blank" rel="noopener noreferrer">
+        <div class="hero-image" id="hero-image"></div>
+        <div class="hero-overlay"></div>
+
+        <div class="hero-topline">
+          <span class="story-index" id="story-index">01</span>
+          <span class="story-region" id="story-region">POLSKA</span>
+          <span class="story-time" id="story-time">—</span>
+        </div>
+
+        <div class="hero-content">
+          <h1 id="headline">Ładowanie wiadomości…</h1>
+          <div class="hero-source" id="source">—</div>
+        </div>
+
+        <div class="hero-controls">
+          <button id="prev" type="button" aria-label="Poprzednia wiadomość">←</button>
+          <button id="next" type="button" aria-label="Następna wiadomość">→</button>
+        </div>
+      </a>
+
+      <div class="progress" id="progress"></div>
+      <div class="slide-list" id="slide-list"></div>
+    </section>
+
+<section class="latest-layout" aria-label="Latest news and source filters">
+  <div class="latest-section" aria-labelledby="latest-heading">
+    <div class="section-heading"><div><span class="eyebrow">Z OSTATNIEJ CHWILI</span><h2 id="latest-heading">Najnowsze wiadomości</h2></div><span class="verified-note">ŹRÓDŁA REDAKCYJNE</span></div>
+    <div class="latest-grid" id="latest-grid"></div><button class="load-more" id="load-more" type="button">Pokaż 10 więcej</button>
+  </div>
+  <div class="right-rail">
+  <aside class="source-panel" aria-labelledby="source-panel-heading">
+    <div class="source-panel-heading"><div><span class="eyebrow">PERSONALIZACJA</span><h2 id="source-panel-heading">Źródła</h2></div><span class="source-count" id="source-count">0</span></div>
+    <p class="source-panel-hint">Wybierz redakcje, które chcesz widzieć.</p>
+    <div class="source-actions"><button type="button" id="sources-all">Wszystkie</button><button type="button" id="sources-none">Wyczyść</button></div>
+    <div class="source-options" id="source-options" aria-live="polite"><span class="source-loading">Ładowanie źródeł?</span></div>
+  </aside>
+    <section class="weather-panel" aria-labelledby="weather-heading">
+      <div class="weather-heading-row"><div><span class="eyebrow">POGODA TERAZ</span><h2 id="weather-heading">Prognoza</h2></div><span class="weather-mark" aria-hidden="true">&#9728;</span></div>
+      <label class="weather-location-label" for="weather-location">Miejscowo??</label>
+      <select id="weather-location" class="weather-location" aria-label="Wybierz miejscowo??">
+        <option value="Białystok">Białystok</option>
+        <option value="Warszawa">Warszawa</option>
+        <option value="Kraków">Kraków</option>
+        <option value="Gdańsk">Gdańsk</option>
+        <option value="Wrocław">Wrocław</option>
+        <option value="Poznań">Poznań</option>
+        <option value="Łódź">Łódź</option>
+        <option value="Lublin">Lublin</option><option value="Olsztyn">Olsztyn</option>
+        <option value="Suwałki">Suwałki</option>
+        <option value="Łomża">Łomża</option>
+      </select>
+      <div class="weather-content" id="weather-content" aria-live="polite"><span class="weather-message">?adowanie prognozy?</span></div>
+      <a class="weather-credit" href="https://www.weatherapi.com/" target="_blank" rel="noopener noreferrer">Weather data by WeatherAPI.com</a>
+      <p class="weather-legal">Forecasts are estimates and may not be accurate for your location or time. For safety-critical decisions, check official meteorological advisories.</p>
+    </section>
+  </div>
+</section>
+</main>
+
+  <script src="/script.js"></script>
+</body>
+</html>
