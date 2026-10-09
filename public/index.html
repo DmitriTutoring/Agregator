@@ -13,7 +13,7 @@
 <body>
   <header class="site-header">
     <div class="header-inner">
-      <a class="brand" href="/">PRZEGLĄD<span>.</span></a>
+      <a class="brand" href="/" aria-label="Biały.pl"><img class="brand-logo" src="/logo-bial-pl.png" alt="Biały.pl" /></a>
       <div class="header-meta">
         <span id="current-date"></span>
         <span class="status-dot" aria-hidden="true"></span>
@@ -34,6 +34,7 @@
       <button class="category" data-filter="nauka">Nauka</button>
       <button class="category" data-filter="kultura">Kultura</button>
       <button class="category" data-filter="zdrowie">Zdrowie</button>
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Przełącz na jasny motyw" title="Przełącz na jasny motyw"><img id="theme-icon" src="/SunSymbol.svg" alt="" /></button>
     </div>
   </nav>
 
@@ -41,6 +42,11 @@
     <div class="ticker-label">WIADOMOŚCI</div>
     <div class="ticker-text" id="ticker-text">Pobieranie najnowszych nagłówków…</div>
   </div>
+
+  <section class="ad-slot ad-slot-top" id="ad-slot-top" aria-label="Miejsce na reklamę">
+    <span class="ad-label">REKLAMA</span>
+    <span class="ad-placeholder">Miejsce na baner reklamowy</span>
+  </section>
 
   <main class="page">
     <section class="hero-shell" aria-label="Najnowsze wiadomości">
@@ -81,10 +87,11 @@
     <div class="source-actions"><button type="button" id="sources-all">Wszystkie</button><button type="button" id="sources-none">Wyczyść</button></div>
     <div class="source-options" id="source-options" aria-live="polite"><span class="source-loading">Ładowanie źródeł?</span></div>
   </aside>
+
     <section class="weather-panel" aria-labelledby="weather-heading">
       <div class="weather-heading-row"><div><span class="eyebrow">POGODA TERAZ</span><h2 id="weather-heading">Prognoza</h2></div><span class="weather-mark" aria-hidden="true">&#9728;</span></div>
-      <label class="weather-location-label" for="weather-location">Miejscowo??</label>
-      <select id="weather-location" class="weather-location" aria-label="Wybierz miejscowo??">
+      <label class="weather-location-label" for="weather-location">Miejscowość</label>
+      <select id="weather-location" class="weather-location" aria-label="Wybierz miejscowość">
         <option value="Białystok">Białystok</option>
         <option value="Warszawa">Warszawa</option>
         <option value="Kraków">Kraków</option>
@@ -92,17 +99,112 @@
         <option value="Wrocław">Wrocław</option>
         <option value="Poznań">Poznań</option>
         <option value="Łódź">Łódź</option>
-        <option value="Lublin">Lublin</option><option value="Olsztyn">Olsztyn</option>
+        <option value="Lublin">Lublin</option>
+        <option value="Olsztyn">Olsztyn</option>
         <option value="Suwałki">Suwałki</option>
         <option value="Łomża">Łomża</option>
       </select>
-      <div class="weather-content" id="weather-content" aria-live="polite"><span class="weather-message">?adowanie prognozy?</span></div>
-      <a class="weather-credit" href="https://www.weatherapi.com/" target="_blank" rel="noopener noreferrer">Weather data by WeatherAPI.com</a>
-      <p class="weather-legal">Forecasts are estimates and may not be accurate for your location or time. For safety-critical decisions, check official meteorological advisories.</p>
+      <form class="weather-search" id="weather-search">
+        <label class="weather-location-label" for="weather-search-input">Szukaj miejscowości</label>
+        <div class="weather-search-row"><input id="weather-search-input" type="search" autocomplete="off" placeholder="np. Suchowola" /><button type="submit">Szukaj</button></div>
+        <div class="weather-search-results" id="weather-search-results" aria-live="polite"></div>
+      </form>
+      <div class="weather-content" id="weather-content" aria-live="polite"><span class="weather-message">Ładowanie prognozy...</span></div>
+      <a class="weather-credit" href="https://www.weatherapi.com/" target="_blank" rel="noopener noreferrer">Dane pogodowe dostarcza WeatherAPI.com</a>
+      <p class="weather-legal">Informacje pogodowe mają charakter ogólny. Prognozy są probabilistyczne i mogą być niedokładne dla danej lokalizacji lub czasu. Nie należy polegać na nich przy decyzjach dotyczących bezpieczeństwa osobistego, lotnictwa, żeglugi, sytuacji kryzysowych ani innych działań wymagających szczególnej dokładności. W takich sytuacjach należy sprawdzić oficjalne komunikaty meteorologiczne i zalecenia właściwych służb.</p>
     </section>
-  </div>
+    <section class="market-panel" aria-labelledby="currency-heading">
+      <div class="market-heading"><h2 id="currency-heading">Kursy walut</h2><span class="market-icon">zł</span></div>
+      <div class="market-list" id="currency-list" aria-live="polite"><span class="market-message">Ładowanie kursów...</span></div>
+      <small class="market-note">Kursy średnie NBP, PLN</small>
+    </section>
+    <section class="market-panel" aria-labelledby="crypto-heading">
+      <div class="market-heading"><h2 id="crypto-heading">Kursy kryptowalut</h2><span class="market-icon">₿</span></div>
+      <div class="market-list" id="crypto-list" aria-live="polite"><span class="market-message">Ładowanie kursów...</span></div>
+      <a class="market-credit" href="https://coinmarketcap.com/api/" target="_blank" rel="noopener noreferrer">Dane kryptowalutowe: CoinMarketCap</a>
+    </section>
+    <section class="market-panel" aria-labelledby="metals-heading">
+      <div class="market-heading"><h2 id="metals-heading">Ceny metali</h2><span class="market-icon">Au</span></div>
+      <div class="market-list" id="metals-list" aria-live="polite"><span class="market-message">Ładowanie cen...</span></div>
+      <a class="market-credit" href="https://api.metalcharts.org/docs" target="_blank" rel="noopener noreferrer">Dane metali: MetalCharts</a>
+    </section>
+    <section class="market-panel" aria-labelledby="lotto-heading">
+      <div class="market-heading"><h2 id="lotto-heading">LOTTO</h2><span class="market-icon">●</span></div>
+      <div class="lotto-tabs" id="lotto-tabs" role="tablist" aria-label="Gry LOTTO"></div><div class="market-list" id="lotto-list" aria-live="polite"><span class="market-message">Ładowanie wyników...</span></div>
+      <a class="market-credit" href="https://www.lotto.pl/wyniki" target="_blank" rel="noopener noreferrer">Sprawdz oficjalne wyniki LOTTO</a>
+    </section>
+    <section class="market-panel" aria-labelledby="fuel-heading">
+      <div class="market-heading"><h2 id="fuel-heading">Ceny paliw</h2><span class="market-icon">&#9981;</span></div>
+      <div class="market-list" id="fuel-list" aria-live="polite"><span class="market-message">Ladowanie cen...</span></div>
+      <small class="market-note">Srednie ceny w Polsce, aktualizowane recznie.</small>
+    </section>  </div>
 </section>
 </main>
+<section class="ad-slot ad-slot-bottom" id="ad-slot-bottom" aria-label="Miejsce na reklamę">
+  <span class="ad-label">REKLAMA</span>
+  <span class="ad-placeholder">Miejsce na baner reklamowy</span>
+</section>
+<footer class="site-footer" id="site-footer">
+  <div class="footer-inner">
+    <div class="footer-intro">
+      <span class="eyebrow">AGREGATOR INFORMACJI</span>
+      <p>Wiadomo&#347;ci lokalne, polskie i &#347;wiatowe oraz najwa&#380;niejsze dane dodatkowe w jednym miejscu.</p>
+    </div>
+    <div class="footer-column">
+      <h2>Modu&#322;y</h2>
+      <ul>
+        <li>Agregacja wiadomo&#347;ci RSS</li>
+        <li>Panel pi&#281;ciu najwa&#380;niejszych historii</li>
+        <li>Najnowsze wiadomo&#347;ci</li>
+        <li>Filtry kategorii i &#378;r&oacute;de&#322;</li>
+        <li>Pogoda i prognoza 3-dniowa</li>
+        <li>Kursy walut NBP</li>
+        <li>Kryptowaluty</li>
+        <li>Ceny metali</li>
+        <li>R&#281;czne wyniki LOTTO</li>
+        <li>R&#281;czne &#347;rednie ceny paliw</li>
+      </ul>
+    </div>
+    <div class="footer-column">
+      <h2>Zaufane &#378;r&oacute;d&#322;a</h2>
+      <ul>
+        <li>RMF24 i Polskie Radio Bia&#322;ystok</li>
+        <li>PAP i Nauka w Polsce</li>
+        <li>Interia, Polsat News, TVN24, Gazeta.pl, Onet i Newsweek</li>
+        <li>Bia&#322;ystok.pl i Wyborcza Bia&#322;ystok</li>
+        <li>OKO.press i Rzeczpospolita</li>
+        <li>BBC News i The Guardian</li>
+        <li>WeatherAPI.com</li>
+        <li>NBP Web API</li>
+        <li>CoinMarketCap i MetalCharts</li>
+        <li>LOTTO.pl i Zapaliwo.pl</li>
+      </ul>
+    </div>
+    <div class="footer-column" id="footer-information">
+      <h2>Informacje</h2>
+      <ul>
+        <li><a href="/about.html">O portalu</a></li>
+        <li><a href="/cooperation.html">Wsp&oacute;&#322;praca</a></li>
+        <li><a href="/contact.html">Kontakt</a></li>
+        <li><a href="/privacy.html">Polityka prywatno&#347;ci</a></li>
+        <li><a href="/terms.html">Regulamin</a></li>
+      </ul>
+    </div>    <div class="footer-column">
+      <h2>Kategorie</h2>
+      <ul class="footer-categories">
+        <li>Bia&#322;ystok</li>
+        <li>Podlaskie</li>
+        <li>Polska</li>
+        <li>&#346;wiat</li>
+        <li>Sport</li>
+        <li>Technologia</li>
+        <li>Nauka</li>
+        <li>Kultura</li>
+        <li>Zdrowie</li>
+      </ul>
+    </div>
+  </div>
+</footer>
 
   <script src="/script.js"></script>
 </body>

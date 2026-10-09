@@ -1,3 +1,24 @@
+const themeToggle = document.querySelector('#theme-toggle');
+const themeIcon = document.querySelector('#theme-icon');
+const savedTheme = localStorage.getItem('aggregator-theme');
+const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+const initialTheme = savedTheme || (prefersLight ? 'light' : 'dark');
+document.documentElement.dataset.theme = initialTheme;
+function updateThemeButton() {
+  const light = document.documentElement.dataset.theme === 'light';
+  const label = light ? 'Przełącz na ciemny motyw' : 'Przełącz na jasny motyw';
+  themeIcon.src = light ? '/MoonSymbol.svg' : '/SunSymbol.svg';
+  themeToggle.setAttribute('aria-label', label);
+  themeToggle.setAttribute('title', label);
+  themeToggle.setAttribute('aria-pressed', String(light));
+}
+themeToggle.addEventListener('click', () => {
+  const nextTheme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+  document.documentElement.dataset.theme = nextTheme;
+  localStorage.setItem('aggregator-theme', nextTheme);
+  updateThemeButton();
+});
+updateThemeButton();
 const hero = document.querySelector('#hero');
 const heroImage = document.querySelector('#hero-image');
 const headline = document.querySelector('#headline');
@@ -18,6 +39,11 @@ const sourceOptions = document.querySelector('#source-options');
 const sourceCount = document.querySelector('#source-count');
 const weatherLocation = document.querySelector('#weather-location');
 const weatherContent = document.querySelector('#weather-content');
+const weatherSearch = document.querySelector('#weather-search');
+const weatherSearchInput = document.querySelector('#weather-search-input');
+const weatherSearchResults = document.querySelector('#weather-search-results');
+let weatherQuery = '';
+weatherLocation.innerHTML = ['B\u0069a\u0142ystok','Warszawa','Krak\u00f3w','Gda\u0144sk','Wroc\u0142aw','Pozna\u0144','\u0141\u00f3d\u017a','Lublin','Olsztyn','Suwa\u0142ki','\u0141om\u017ca'].map((name) => '<option value="'+name+'">'+name+'</option>').join('');
 const selectedSources = new Set();
 let sourceOptionsReady = false;
 
@@ -85,7 +111,7 @@ function updateSourceCount() {
 }
 
 function sourceFiltered(articles) {
-  return articles.filter((article) => selectedSources.has(article.sourceId || article.sourceGroup || article.source));
+  return articles.filter((article) => selectedSources.has(article.sourceFilterId || article.sourceId || article.sourceGroup || article.source));
 }
 
 function renderLatest() {
@@ -187,47 +213,195 @@ categoryButtons.forEach((button) => {
   });
 });
 
-const weatherEmoji = (code) => ({1000:'??',1003:'???',1006:'??',1009:'??',1030:'???',1135:'???',1150:'???',1180:'???',1183:'???',1186:'???',1189:'???',1192:'???',1195:'???',1063:'???',1066:'???',1210:'???',1213:'???',1216:'??',1219:'??',1222:'??',1225:'??',1087:'??'}[code] || '???');
+function weatherIcon(src, className) {
+  if (!src) return null;
+  const image = document.createElement('img'); image.className = className; image.alt = ''; image.src = src; image.loading = 'lazy'; return image;
+}
 function renderWeather(data) {
   weatherContent.innerHTML = '';
   const current = document.createElement('div'); current.className = 'weather-current';
-  const icon = document.createElement('span'); icon.className = 'weather-current-icon'; icon.textContent = weatherEmoji(data.current.code);
+  const icon = weatherIcon(data.current.icon, 'weather-current-icon'); if (icon) current.appendChild(icon);
   const summary = document.createElement('div'); summary.className = 'weather-current-summary';
   const place = document.createElement('strong'); place.textContent = data.location.name;
   const condition = document.createElement('span'); condition.textContent = data.current.condition;
   summary.append(place, condition);
-  const temp = document.createElement('span'); temp.className = 'weather-temperature'; temp.textContent = Math.round(data.current.tempC) + String.fromCodePoint(0x00b0);
-  current.append(icon, summary, temp); weatherContent.appendChild(current);
+  const temp = document.createElement('span'); temp.className = 'weather-temperature'; temp.textContent = Math.round(data.current.tempC) + '°';
+  current.append(summary, temp); weatherContent.appendChild(current);
   const details = document.createElement('div'); details.className = 'weather-details';
-  details.textContent = 'Odczuwalna ' + Math.round(data.current.feelsLikeC) + String.fromCodePoint(0x00b0) + '  ?  Wiatr ' + Math.round(data.current.windKph) + ' km/h'; weatherContent.appendChild(details);
+  details.textContent = 'Odczuwalna ' + Math.round(data.current.feelsLikeC) + '° · Wilgotność ' + data.current.humidity + '% · Wiatr ' + Math.round(data.current.windKph) + ' km/h';
+  weatherContent.appendChild(details);
+
   const forecast = document.createElement('div'); forecast.className = 'weather-forecast';
   data.days.forEach((day, index) => {
     const row = document.createElement('div'); row.className = 'weather-day';
-    const name = document.createElement('span'); name.textContent = index === 0 ? 'Dzi?' : new Intl.DateTimeFormat('pl-PL',{weekday:'short'}).format(new Date(day.date+'T12:00:00'));
-    const symbol = document.createElement('span'); symbol.textContent = weatherEmoji(day.code);
-    const rain = document.createElement('span'); rain.className='weather-rain'; rain.textContent = day.chanceOfRain + '%';
-    const range = document.createElement('strong'); range.textContent = Math.round(day.maxC)+String.fromCodePoint(0x00b0)+' / '+Math.round(day.minC)+String.fromCodePoint(0x00b0);
-    row.append(name,symbol,rain,range); forecast.appendChild(row);
+    const date = new Date(day.date + 'T12:00:00');
+    const name = document.createElement('span'); name.className = 'weather-day-name';
+    name.textContent = index === 0 ? 'Dziś' : new Intl.DateTimeFormat('pl-PL', { weekday: 'short' }).format(date) + ' ' + date.getDate();
+    const icon = weatherIcon(day.icon, 'weather-day-icon');
+    const range = document.createElement('strong'); range.textContent = Math.round(day.minC) + '° / ' + Math.round(day.maxC) + '°';
+    const precipitation = document.createElement('span'); precipitation.className = 'weather-rain';
+    const amount = Number(day.precipMm || 0);
+    precipitation.textContent = amount > 0 ? amount.toFixed(1).replace('.', ',') + ' mm' : '—';
+    precipitation.title = 'Suma opadów';
+    row.append(name); if (icon) row.append(icon); row.append(range, precipitation); forecast.appendChild(row);
   });
   weatherContent.appendChild(forecast);
 }
-
 async function loadWeather() {
-  const location = weatherLocation.value;
-  weatherContent.textContent = '?adowanie prognozy?';
+  const location = weatherQuery || weatherLocation.value;
+  weatherContent.textContent = 'Ładowanie prognozy...';
   try {
     const response = await fetch('/api/weather?location='+encodeURIComponent(location));
     const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'Prognoza niedost?pna.');
+    if (!response.ok) throw new Error(data.message || 'Nie udało się pobrać prognozy.');
     renderWeather(data);
   } catch (error) {
     weatherContent.innerHTML = '';
     const message=document.createElement('p'); message.className='weather-message'; message.textContent=error.message; weatherContent.appendChild(message);
-    if (error.message.includes('klucz WeatherAPI')) { const help=document.createElement('small'); help.className='weather-setup-note'; help.textContent='Ustaw WEATHERAPI_KEY w pliku .env obok server.js i uruchom ponownie serwer.'; weatherContent.appendChild(help); }
+    if (error.message.includes('Dodaj klucz WeatherAPI do ustawień serwera.')) { const help=document.createElement('small'); help.className='weather-setup-note'; help.textContent='Ustaw WEATHERAPI_KEY w pliku .env obok server.js i uruchom ponownie serwer.'; weatherContent.appendChild(help); }
   }
 }
-weatherLocation.value = localStorage.getItem('weather-location') || 'Bia?ystok';
-weatherLocation.addEventListener('change', () => { localStorage.setItem('weather-location', weatherLocation.value); loadWeather(); });
+const savedWeatherLocation = localStorage.getItem('weather-location');
+weatherLocation.value = [...weatherLocation.options].some((option) => option.value === savedWeatherLocation) ? savedWeatherLocation : weatherLocation.options[0].value;
+weatherLocation.addEventListener('change', () => { weatherQuery = ''; localStorage.setItem('weather-location', weatherLocation.value); loadWeather(); });
+weatherSearch.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const query = weatherSearchInput.value.trim();
+  weatherSearchResults.textContent = 'Wyszukiwanie...';
+  try {
+    const response = await fetch('/api/weather/search?q=' + encodeURIComponent(query));
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'Nie udało się wyszukać miejscowości.');
+    weatherSearchResults.innerHTML = '';
+    if (!data.results.length) { weatherSearchResults.textContent = 'Nie znaleziono miejscowości w Polsce.'; return; }
+    data.results.forEach((place) => {
+      const button = document.createElement('button'); button.type = 'button'; button.className = 'weather-search-result';
+      button.textContent = [place.name, place.region].filter(Boolean).join(', ');
+      button.addEventListener('click', () => { weatherQuery = place.query; weatherSearchResults.innerHTML = ''; loadWeather(); });
+      weatherSearchResults.appendChild(button);
+    });
+  } catch (error) { weatherSearchResults.textContent = error.message; }
+});
+
+const currencyList = document.querySelector('#currency-list');
+const cryptoList = document.querySelector('#crypto-list');
+const metalsList = document.querySelector('#metals-list');
+const lottoTabs = document.querySelector('#lotto-tabs');
+const lottoList = document.querySelector('#lotto-list');
+const fuelList = document.querySelector('#fuel-list');
+const formatPln = (value) => new Intl.NumberFormat('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value) + ' zł';
+function renderCurrencies(data) {
+  currencyList.innerHTML = '';
+  data.rates.forEach((rate) => { const row = document.createElement('div'); row.className = 'market-row'; row.innerHTML = '<span><strong>'+rate.code+'</strong><small>'+rate.name+'</small></span><b>'+formatPln(rate.value)+'</b>'; currencyList.appendChild(row); });
+}
+function renderCrypto(data) {
+  cryptoList.innerHTML = '';
+  data.rates.forEach((rate) => { const row = document.createElement('div'); row.className = 'market-row'; const change = Number(rate.change24h); const trend = document.createElement('small'); trend.className = 'market-change ' + (change >= 0 ? 'up' : 'down'); trend.textContent = (change >= 0 ? '+' : '') + change.toFixed(2).replace('.', ',') + '%'; row.innerHTML = '<span><strong>'+rate.symbol+'</strong><small>'+rate.name+'</small></span><b>'+formatPln(rate.value)+'</b>'; row.querySelector('span').appendChild(trend); cryptoList.appendChild(row); });
+}
+function renderMetals(data) {
+  metalsList.innerHTML = '';
+  data.rates.forEach((rate) => { const row = document.createElement('div'); row.className = 'market-row'; const change = Number(rate.change24h); const trend = document.createElement('small'); trend.className = 'market-change ' + (change >= 0 ? 'up' : 'down'); trend.textContent = (change >= 0 ? '+' : '') + change.toFixed(2).replace('.', ',') + '%'; row.innerHTML = '<span><strong>'+rate.symbol+'</strong><small>'+rate.name+' ('+rate.unit+')</small></span><b>'+Number(rate.value).toLocaleString('pl-PL',{maximumFractionDigits:2})+' USD</b>'; row.querySelector('span').appendChild(trend); metalsList.appendChild(row); });
+}
+function formatManualDate(value) {
+  if (!value) return '';
+  const date = new Date(value + 'T00:00:00');
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
+}
+function renderLottoGame(game) {
+  lottoList.innerHTML = '';
+  if (Array.isArray(game?.numbers) && game.numbers.length) {
+    const heading = document.createElement('strong');
+    heading.textContent = (game.name || 'Lotto') + (game.drawDate ? ' · ' + formatManualDate(game.drawDate) : '');
+    lottoList.appendChild(heading);
+    const numbers = document.createElement('div');
+    numbers.className = 'manual-numbers';
+    game.numbers.forEach((value) => {
+      const number = document.createElement('span');
+      number.textContent = value;
+      numbers.appendChild(number);
+    });
+    lottoList.appendChild(numbers);
+    if (Array.isArray(game.extraNumbers) && game.extraNumbers.length) {
+      const extra = document.createElement('small');
+      extra.className = 'market-note';
+      extra.textContent = 'Dodatkowe liczby: ' + game.extraNumbers.join(' · ');
+      lottoList.appendChild(extra);
+    }
+    if (game.plusNumber !== undefined && game.plusNumber !== null && game.plusNumber !== '') {
+      const plus = document.createElement('small');
+      plus.className = 'market-note';
+      plus.textContent = 'Plus: ' + game.plusNumber;
+      lottoList.appendChild(plus);
+    }
+    if (game.drawNumber) {
+      const draw = document.createElement('small');
+      draw.className = 'market-note';
+      draw.textContent = 'Numer losowania: ' + game.drawNumber;
+      lottoList.appendChild(draw);
+    }
+  } else {
+    lottoList.textContent = 'Brak wpisanego wyniku.';
+  }
+}
+function renderManualInfo(data) {
+  const lotto = data.lotto || {};
+  const games = Array.isArray(lotto.games)
+    ? lotto.games
+    : (Array.isArray(lotto.numbers) ? [lotto] : []);
+  lottoTabs.innerHTML = '';
+  if (games.length) {
+    const activeKey = lotto.activeGame || games[0].key || games[0].name;
+    const activeGame = games.find((game) => (game.key || game.name) === activeKey) || games[0];
+    games.forEach((game) => {
+      const key = game.key || game.name;
+      const tab = document.createElement('button');
+      tab.type = 'button';
+      tab.className = 'lotto-tab' + (game === activeGame ? ' active' : '');
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-selected', game === activeGame ? 'true' : 'false');
+      tab.textContent = game.name || 'Lotto';
+      tab.addEventListener('click', () => {
+        lottoTabs.querySelectorAll('.lotto-tab').forEach((item) => {
+          const selected = item === tab;
+          item.classList.toggle('active', selected);
+          item.setAttribute('aria-selected', selected ? 'true' : 'false');
+        });
+        renderLottoGame(game);
+      });
+      tab.dataset.game = key;
+      lottoTabs.appendChild(tab);
+    });
+    renderLottoGame(activeGame);
+  } else {
+    lottoList.textContent = 'Brak wpisanego wyniku.';
+  }
+
+  fuelList.innerHTML = '';
+  const fuel = data.fuel || {};
+  const labels = [['pb95', 'Pb95'], ['diesel', 'ON'], ['lpg', 'LPG']];
+  const available = labels.filter(([key]) => Number.isFinite(Number(fuel.prices?.[key])));
+  if (available.length) {
+    available.forEach(([key, label]) => {
+      const row = document.createElement('div');
+      row.className = 'market-row';
+      row.innerHTML = '<span><strong>' + label + '</strong></span><b>' + Number(fuel.prices[key]).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + (fuel.unit || 'PLN/l') + '</b>';
+      fuelList.appendChild(row);
+    });
+    const date = document.createElement('small');
+    date.className = 'market-note';
+    date.textContent = 'Stan na: ' + (fuel.asOf || 'brak daty');
+    fuelList.appendChild(date);
+  } else {
+    fuelList.textContent = 'Brak wpisanych cen.';
+  }
+}async function loadMarkets() {
+  try { const response = await fetch('/api/markets/currencies'); const data = await response.json(); if (!response.ok) throw new Error(data.message); renderCurrencies(data); } catch (error) { currencyList.textContent = error.message || 'Kursy walut są chwilowo niedostępne.'; }
+  try { const response = await fetch('/api/markets/crypto'); const data = await response.json(); if (!response.ok) throw new Error(data.message); renderCrypto(data); } catch (error) { cryptoList.textContent = error.message || 'Kursy kryptowalut są chwilowo niedostępne.'; }
+  try { const response = await fetch('/api/markets/metals'); const data = await response.json(); if (!response.ok) throw new Error(data.message); renderMetals(data); } catch (error) { metalsList.textContent = error.message || 'Ceny metali są chwilowo niedostępne.'; }
+  try { const response = await fetch('/api/manual-info'); const data = await response.json(); if (!response.ok) throw new Error(data.message); renderManualInfo(data); } catch (error) { lottoList.textContent = error.message || 'Wyniki LOTTO sa chwilowo niedostepne.'; fuelList.textContent = error.message || 'Ceny paliw sa chwilowo niedostepne.'; }
+}
+
+
 
 function setDate() {
   dateEl.textContent = new Intl.DateTimeFormat('pl-PL', {
@@ -259,4 +433,8 @@ async function load() {
 
 setDate();
 load();
+loadWeather();
+loadMarkets();
 setInterval(load, refreshInterval);
+setInterval(loadWeather, 30 * 60 * 1000);
+setInterval(loadMarkets, 15 * 60 * 1000);

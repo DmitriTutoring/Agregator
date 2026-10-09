@@ -13,6 +13,10 @@ const app = express();
 const port = process.env.PORT || 3000;
 const refreshIntervalMs = 60 * 60 * 1000;
 const weatherApiKey = process.env.WEATHERAPI_KEY || '';
+const coinMarketCapApiKey = process.env.COINMARKETCAP_API_KEY || '';
+const metalChartsApiKey = process.env.METALCHARTS_API_KEY || '';
+const marketCache = new Map();
+const marketCacheTtlMs = 15 * 60 * 1000;
 const weatherCache = new Map();
 const weatherCacheTtlMs = 30 * 60 * 1000;
 
@@ -28,6 +32,35 @@ const parser = new Parser({
 });
 
 const FEEDS = [
+  {
+    name: 'Onet Wiadomo\u015bci',
+    sourceGroup: 'onet-wiadomosci',
+    url: 'https://wiadomosci.onet.pl/rss',
+    weight: 3,
+    region: 'polska'
+  },
+  {
+    name: 'Newsweek Polska',
+    sourceGroup: 'newsweek-polska',
+    url: 'https://www.newsweek.pl/rss.xml',
+    weight: 2,
+    region: 'polska'
+  },
+
+  {
+    name: 'Polskie Radio Bia\u0142ystok',
+    sourceGroup: 'radio-bialystok',
+    url: 'https://www.radio.bialystok.pl/rss',
+    weight: 4,
+    region: 'podlasie'
+  },
+  {
+    name: 'Gazeta.pl Wiadomo\u015bci',
+    sourceGroup: 'gazeta-wiadomosci',
+    url: 'https://wiadomosci.gazeta.pl/pub/rss/wiadomosci.htm',
+    weight: 3,
+    region: 'polska'
+  },
   {
     name: 'RMF24 · Białystok',
     sourceGroup: 'rmf24',
@@ -140,6 +173,8 @@ function decodeHtml(value = '') {
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'")
     .replace(/&#x27;/gi, "'")
+    .replace(/&#x([0-9a-f]+);?/gi, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16)))
+    .replace(/&#(\d+);?/g, (_, code) => String.fromCodePoint(Number.parseInt(code, 10)))
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -263,6 +298,28 @@ const REGION_WEIGHTS = {
   bialystok: 5, podlasie: 4, polska: 3, swiat: 2,
   nauka: 3, sport: 3, technologia: 3, kultura: 3, zdrowie: 3
 };
+function sourceFilterId(feed) {
+  const group = feed.sourceGroup || feed.name || 'unknown';
+  if (/^rmf24(?:-|$)/.test(group)) return 'rmf24';
+  if (/^bbc(?:-|$)/.test(group)) return 'bbc';
+  if (/^guardian(?:-|$)/.test(group)) return 'guardian';
+  if (/^pap(?:-|$)/.test(group)) return 'pap';
+  if (/^science-in-poland(?:-|$)/.test(group)) return 'science-in-poland';
+  return group;
+}
+
+const SOURCE_FILTER_NAMES = {
+  rmf24: 'RMF24',
+  bbc: 'BBC News',
+  guardian: 'The Guardian',
+  pap: 'PAP MediaRoom',
+  'science-in-poland': 'Nauka w Polsce (PAP)'
+};
+
+function sourceFilterName(feed) {
+  const id = sourceFilterId(feed);
+  return SOURCE_FILTER_NAMES[id] || feed.name;
+}
 function normalize(item, feed) {
   const title = decodeHtml(item.title || '').replace(/\s*[-|] [^-|]+$/, '').trim() || 'Bez tytułu';
   const description = decodeHtml(item.contentSnippet || item.content || item.description || '');
@@ -275,6 +332,8 @@ function normalize(item, feed) {
     source: sourceName(item, feed.name),
     sourceGroup: feed.sourceGroup || feed.name,
     sourceId: feed.sourceGroup || feed.name,
+    sourceFilterId: sourceFilterId(feed),
+    sourceFilterName: sourceFilterName(feed),
     url: item.link,
     publishedAt: item.isoDate || item.pubDate || new Date().toISOString(),
     region,
@@ -372,7 +431,12 @@ function topStories(items, limit = 5) {
 }
 
 async function readFeed(feed) {
-  const data = await parser.parseURL(feed.url);
+  const response = await fetch(feed.url, { signal: AbortSignal.timeout(10000) });
+  if (!response.ok) throw new Error('Feed returned HTTP ' + response.status);
+  const bytes = Buffer.from(await response.arrayBuffer());
+  let xml = new TextDecoder('utf-8').decode(bytes);
+  if (xml.includes('�')) xml = new TextDecoder('windows-1250').decode(bytes);
+  const data = await parser.parseString(xml);
   const items = data.items.map((item) => normalize(item, feed));
   const pageImageCandidates = items.filter((item) => !item.image && item.url).slice(0, 20);
 
@@ -422,52 +486,119 @@ async function refreshNews() {
   return refreshPromise;
 }
 
+const weatherLocations = new Set(['Białystok','Warszawa','Kraków','Gdańsk','Wrocław','Poznań','Łódź','Lublin','Olsztyn','Suwałki','Łomża']);
 app.get('/api/weather', async (req, res) => {
-  const location = String(req.query.location || 'Bia?ystok').trim().slice(0, 80) || 'Bia?ystok';
+  const requested = String(req.query.location || 'Białystok').trim();
+  const location = requested.slice(0, 100);
+  if (location.length < 2) return res.status(400).json({ error: 'invalid_location', message: 'Podaj miejscowość.' });
+  const days = 3;
   const cacheKey = location.toLocaleLowerCase('pl-PL');
   const cached = weatherCache.get(cacheKey);
-  if (cached && Date.now() - cached.fetchedAt < weatherCacheTtlMs) {
-    return res.json({ ...cached.data, cached: true });
-  }
-  if (!weatherApiKey) {
-    return res.status(503).json({ error: 'weather_key_missing', message: 'Dodaj klucz WeatherAPI do ustawie? serwera.' });
-  }
+  if (cached && Date.now() - cached.fetchedAt < weatherCacheTtlMs) return res.json({ ...cached.data, cached: true });
+  if (!weatherApiKey) return res.status(503).json({ error: 'weather_key_missing', message: 'Dodaj klucz WeatherAPI do ustawień serwera.' });
 
   try {
     const url = new URL('https://api.weatherapi.com/v1/forecast.json');
-    url.searchParams.set('key', weatherApiKey);
-    url.searchParams.set('q', location);
-    url.searchParams.set('days', '3');
-    url.searchParams.set('aqi', 'no');
-    url.searchParams.set('alerts', 'no');
+    url.searchParams.set('key', weatherApiKey); url.searchParams.set('q', location === 'Białystok' ? 'Bialystok, Poland' : location);
+    url.searchParams.set('days', String(days)); url.searchParams.set('aqi', 'no');
+    url.searchParams.set('alerts', 'no'); url.searchParams.set('lang', 'pl');
     const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
     const payload = await response.json();
     if (!response.ok) {
-      const message = payload.error?.code === 1006 ? 'Nie znaleziono tej miejscowo?ci.' : 'Nie uda?o si? pobra? prognozy.';
-      return res.status(response.status === 400 ? 404 : 502).json({ error: 'weather_unavailable', message });
+      const quotaExceeded = payload.error?.code === 2007;
+      const invalidKey = payload.error?.code === 2006 || payload.error?.code === 2008;
+      const notFound = payload.error?.code === 1006;
+      return res.status(notFound ? 404 : 502).json({
+        error: notFound ? 'location_not_found' : (invalidKey ? 'weather_key_invalid' : 'weather_unavailable'),
+        message: notFound ? 'Nie znaleziono tej miejscowości.' : (quotaExceeded ? 'Osiągnięto miesięczny limit zapytań WeatherAPI.' : (invalidKey ? 'Klucz WeatherAPI jest nieprawidłowy lub wyłączony.' : 'Nie udało się pobrać prognozy.'))
+      });
     }
+    const safeIcon = (value) => typeof value === 'string' && /^\/\/cdn\.weatherapi\.com\//.test(value) ? 'https:' + value : null;
     const data = {
       location: { name: payload.location.name, region: payload.location.region, country: payload.location.country },
-      current: {
-        tempC: payload.current.temp_c, feelsLikeC: payload.current.feelslike_c, code: payload.current.condition.code,
-        condition: payload.current.condition.text, icon: payload.current.condition.icon,
-        humidity: payload.current.humidity, windKph: payload.current.wind_kph
-      },
-      days: payload.forecast.forecastday.map((day) => ({
-        date: day.date, maxC: day.day.maxtemp_c, minC: day.day.mintemp_c,
-        condition: day.day.condition.text, icon: day.day.condition.icon, code: day.day.condition.code,
-        chanceOfRain: day.day.daily_chance_of_rain
-      })),
+      current: { tempC: payload.current.temp_c, feelsLikeC: payload.current.feelslike_c, condition: payload.current.condition.text, icon: safeIcon(payload.current.condition.icon), humidity: payload.current.humidity, windKph: payload.current.wind_kph },
+      days: payload.forecast.forecastday.map((day) => ({ date: day.date, maxC: day.day.maxtemp_c, minC: day.day.mintemp_c, condition: day.day.condition.text, icon: safeIcon(day.day.condition.icon), chanceOfRain: day.day.daily_chance_of_rain, precipMm: day.day.totalprecip_mm, windKph: day.day.maxwind_kph })),
       updatedAt: payload.current.last_updated
     };
     weatherCache.set(cacheKey, { fetchedAt: Date.now(), data });
     return res.json({ ...data, cached: false });
-  } catch (error) {
-    console.error('Weather request failed:', error.message);
-    return res.status(502).json({ error: 'weather_unavailable', message: 'Prognoza jest chwilowo niedost?pna.' });
+  } catch {
+    // Do not log upstream error messages: request URLs can contain the private API key.
+    return res.status(502).json({ error: 'weather_unavailable', message: 'Prognoza jest chwilowo niedostępna.' });
   }
 });
 
+weatherLocations.clear();
+['B\u0069a\u0142ystok','Warszawa','Krak\u00f3w','Gda\u0144sk','Wroc\u0142aw','Pozna\u0144','\u0141\u00f3d\u017a','Lublin','Olsztyn','Suwa\u0142ki','\u0141om\u017ca'].forEach((name) => weatherLocations.add(name));
+
+app.get('/api/weather/search', async (req, res) => {
+  const query = String(req.query.q || '').trim();
+  if (query.length < 2) return res.status(400).json({ error: 'query_too_short', message: 'Wpisz co najmniej 2 znaki.' });
+  if (!weatherApiKey) return res.status(503).json({ error: 'weather_key_missing', message: 'Klucz WeatherAPI nie jest skonfigurowany.' });
+  try {
+    const url = new URL('https://api.weatherapi.com/v1/search.json');
+    url.searchParams.set('key', weatherApiKey); url.searchParams.set('q', query);
+    const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    const payload = await response.json();
+    if (!response.ok) return res.status(502).json({ error: 'weather_unavailable', message: 'Nie udało się wyszukać miejscowości.' });
+    const results = Array.isArray(payload) ? payload.filter((place) => place.country === 'Poland').slice(0, 8).map((place) => ({ name: place.name, region: place.region, country: place.country, query: place.name + ', ' + (place.region || 'Poland') })) : [];
+    return res.json({ results });
+  } catch { return res.status(502).json({ error: 'weather_unavailable', message: 'Wyszukiwanie jest chwilowo niedostępne.' }); }
+});
+app.get('/api/markets/currencies', async (req, res) => {
+  const cached = marketCache.get('currencies');
+  if (cached && Date.now() - cached.fetchedAt < marketCacheTtlMs) return res.json({ ...cached.data, cached: true });
+  try {
+    const response = await fetch('https://api.nbp.pl/api/exchangerates/tables/A?format=json', { signal: AbortSignal.timeout(10000) });
+    if (!response.ok) return res.status(502).json({ error: 'currency_unavailable', message: 'Nie udało się pobrać kursów walut.' });
+    const table = (await response.json())[0];
+    const wanted = new Set(['EUR', 'USD', 'GBP', 'CHF', 'CZK']);
+    const data = { date: table.effectiveDate, rates: table.rates.filter((rate) => wanted.has(rate.code)).map((rate) => ({ code: rate.code, name: rate.currency, value: rate.mid })) };
+    marketCache.set('currencies', { fetchedAt: Date.now(), data });
+    return res.json({ ...data, cached: false });
+  } catch { return res.status(502).json({ error: 'currency_unavailable', message: 'Kursy walut są chwilowo niedostępne.' }); }
+});
+
+app.get('/api/markets/crypto', async (req, res) => {
+  const cached = marketCache.get('crypto');
+  if (cached && Date.now() - cached.fetchedAt < marketCacheTtlMs) return res.json({ ...cached.data, cached: true });
+  if (!coinMarketCapApiKey) return res.status(503).json({ error: 'crypto_key_missing', message: 'Moduł kryptowalut wymaga klucza CoinMarketCap.' });
+  try {
+    const url = new URL('https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest');
+    url.searchParams.set('symbol', 'BTC,ETH,SOL,BNB'); url.searchParams.set('convert', 'PLN');
+    const response = await fetch(url, { headers: { 'X-CMC_PRO_API_KEY': coinMarketCapApiKey }, signal: AbortSignal.timeout(10000) });
+    const payload = await response.json();
+    if (!response.ok || !payload.data) return res.status(502).json({ error: 'crypto_unavailable', message: 'Nie udało się pobrać kursów kryptowalut.' });
+    const symbols = ['BTC', 'ETH', 'SOL', 'BNB'];
+    const data = { updatedAt: payload.status?.timestamp || null, rates: symbols.filter((symbol) => payload.data[symbol]).map((symbol) => ({ symbol, name: payload.data[symbol].name, value: payload.data[symbol].quote.PLN.price, change24h: payload.data[symbol].quote.PLN.percent_change_24h })) };
+    marketCache.set('crypto', { fetchedAt: Date.now(), data });
+    return res.json({ ...data, cached: false });
+  } catch { return res.status(502).json({ error: 'crypto_unavailable', message: 'Kursy kryptowalut są chwilowo niedostępne.' }); }
+});
+app.get('/api/markets/metals', async (req, res) => {
+  const cached = marketCache.get('metals');
+  if (cached && Date.now() - cached.fetchedAt < marketCacheTtlMs) return res.json({ ...cached.data, cached: true });
+  if (!metalChartsApiKey) return res.status(503).json({ error: 'metals_key_missing', message: 'Moduł metali wymaga klucza MetalCharts.' });
+  try {
+    const url = new URL('https://api.metalcharts.org/v1/metals/');
+    url.searchParams.set('symbols', 'XAU,XAG,XPT,XCU');
+    const response = await fetch(url, { headers: { Authorization: 'Bearer ' + metalChartsApiKey }, signal: AbortSignal.timeout(10000) });
+    const payload = await response.json();
+    if (!response.ok || !payload.data?.items) return res.status(502).json({ error: 'metals_unavailable', message: 'Nie udało się pobrać cen metali.' });
+    const wanted = new Set(['XAU', 'XAG', 'XPT', 'XCU']);
+    const data = { updatedAt: new Date().toISOString(), rates: payload.data.items.filter((item) => wanted.has(item.symbol)).map((item) => ({ symbol: item.symbol, name: item.name, value: item.price, unit: item.unit, change24h: item.change24h })) };
+    marketCache.set('metals', { fetchedAt: Date.now(), data });
+    return res.json({ ...data, cached: false });
+  } catch { return res.status(502).json({ error: 'metals_unavailable', message: 'Ceny metali są chwilowo niedostępne.' }); }
+});
+app.get('/api/manual-info', (req, res) => {
+  try {
+    const data = JSON.parse(readFileSync(new URL('./data/manual-info.json', import.meta.url), 'utf8'));
+    return res.json(data);
+  } catch {
+    return res.status(503).json({ error: 'manual_info_unavailable', message: 'Dane LOTTO i paliw sa chwilowo niedostepne.' });
+  }
+});
 app.use(express.static('public'));
 
 app.get('/api/news', (req, res) => {
@@ -476,7 +607,7 @@ app.get('/api/news', (req, res) => {
 
   res.json({
     articles: topStories(newsCache.articles, limit),
-    sources: [...new Map(newsCache.articles.map((article) => [article.sourceId, { id: article.sourceId, name: article.source }])).values()].sort((a, b) => a.name.localeCompare(b.name, 'pl')),
+    sources: [...new Map(newsCache.articles.map((article) => [article.sourceFilterId || article.sourceId, { id: article.sourceFilterId || article.sourceId, name: article.sourceFilterName || article.source }])).values()].sort((a, b) => a.name.localeCompare(b.name, 'pl')),
     latest: newsCache.articles.slice().sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt)).slice(0, 100),
     fetchedAt: newsCache.fetchedAt,
     failedSources: newsCache.failedSources
