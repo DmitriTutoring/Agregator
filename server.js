@@ -320,6 +320,41 @@ function sourceFilterName(feed) {
   const id = sourceFilterId(feed);
   return SOURCE_FILTER_NAMES[id] || feed.name;
 }
+const translationCache = new Map();
+const translateEnglish = process.env.TRANSLATE_ENGLISH !== 'false';
+async function translateText(text) {
+  const value = String(text || '').trim();
+  if (!value || value.length < 3) return value;
+  if (translationCache.has(value)) return translationCache.get(value);
+  try {
+    const url = new URL('https://translate.googleapis.com/translate_a/single');
+    url.searchParams.set('client', 'gtx');
+    url.searchParams.set('sl', 'auto');
+    url.searchParams.set('tl', 'pl');
+    url.searchParams.set('dt', 't');
+    url.searchParams.set('q', value.slice(0, 900));
+    const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!response.ok) return value;
+    const payload = await response.json();
+    const translated = Array.isArray(payload?.[0])
+      ? payload[0].map((part) => part?.[0] || '').join('').trim()
+      : '';
+    const result = translated || value;
+    if (translationCache.size > 2000) translationCache.delete(translationCache.keys().next().value);
+    translationCache.set(value, result);
+    return result;
+  } catch {
+    return value;
+  }
+}
+async function translateEnglishArticle(article, feed) {
+  if (!translateEnglish || !['bbc', 'guardian'].includes(sourceFilterId(feed))) return article;
+  const [title, description] = await Promise.all([
+    translateText(article.title),
+    translateText(article.description)
+  ]);
+  return { ...article, title, description };
+}
 function normalize(item, feed) {
   const title = decodeHtml(item.title || '').replace(/\s*[-|] [^-|]+$/, '').trim() || 'Bez tytułu';
   const description = decodeHtml(item.contentSnippet || item.content || item.description || '');
@@ -437,7 +472,7 @@ async function readFeed(feed) {
   let xml = new TextDecoder('utf-8').decode(bytes);
   if (xml.includes('�')) xml = new TextDecoder('windows-1250').decode(bytes);
   const data = await parser.parseString(xml);
-  const items = data.items.map((item) => normalize(item, feed));
+  const items = await Promise.all(data.items.map(async (item) => translateEnglishArticle(normalize(item, feed), feed)));
   const pageImageCandidates = items.filter((item) => !item.image && item.url).slice(0, 20);
 
   await Promise.all(pageImageCandidates.map(async (item) => {

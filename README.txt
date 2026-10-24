@@ -121,6 +121,11 @@ Funkcje:
 
 Klucz WeatherAPI pozostaje po stronie serwera.
 
+## Tłumaczenie wiadomości
+
+Artykuły pobierane z kanałów BBC News i The Guardian są tłumaczone po stronie serwera na język polski.
+
+Tłumaczenie działa jako funkcja pomocnicza. Jeżeli usługa tłumaczeniowa jest chwilowo niedostępna, artykuł pozostaje w oryginalnym języku i nie blokuje agregacji pozostałych wiadomości.
 ## Moduły rynkowe
 
 ### Waluty
@@ -268,11 +273,7 @@ Panel nagłówka z logo pozostaje ciemny w obu motywach.
 
 Strona zawiera dwa puste miejsca na reklamy. Nie ładują one żadnego dostawcy reklam ani zewnętrznego kodu reklamowego.
 
-Miejsca są oznaczone identyfikatorami:
-
-
-ad-slot-top
-ad-slot-bottom
+Miejsca są obsługiwane przez pliki public/reklama_gora.html oraz public/reklama_dol.html.
 
 
 Lokalizacje:
@@ -295,13 +296,13 @@ Stopka zawiera:
 
 Aktualne placeholdery ścieżek:
 
-- /about.html
-- /cooperation.html
-- /contact.html
-- /privacy.html
-- /terms.html
+- /oportalu.html
+- /wspolpraca.html
+- /kontakt.html
+- /polityka.html
+- /regulamin.html
 
-Są to celowo tymczasowe ścieżki. Można je zastąpić po utworzeniu właściwych stron.
+Treść tych stron znajduje się w osobnych plikach HTML i można ją bezpośrednio zastąpić właściwą treścią.
 
 ## Struktura projektu
 
@@ -309,9 +310,13 @@ Są to celowo tymczasowe ścieżki. Można je zastąpić po utworzeniu właściw
 - public/index.html — struktura strony i stopka
 - public/style.css — układ, responsywność, motywy, widgety, stopka i miejsca reklamowe
 - public/script.js — renderowanie wiadomości, filtry, motywy, pogoda i moduły rynkowe
-- public/logo-bial-pl.png — logo w nagłówku
+- public/logo-bial-pl.png — obecny zapasowy plik logo w nagłówku
+- public/logo-bialystok-org.png — docelowe logo bialystok.org.pl, jeżeli zostanie dodane do projektu
 - public/SunSymbol.svg — ikona jasnego motywu
 - public/MoonSymbol.svg — ikona ciemnego motywu
+- public/reklama_gora.html — edytowalne miejsce na górną reklamę
+- public/reklama_dol.html — edytowalne miejsce na dolną reklamę
+- public/stopka.html — edytowalna treść zastrzeżenia w stopce
 - data/manual-info.json — ręcznie aktualizowane dane LOTTO i paliw
 - start.bat — launcher systemu Windows
 - setup.bat — sprawdzenie Node.js, instalacja zależności i uruchomienie projektu

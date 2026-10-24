@@ -29,6 +29,7 @@ const storyTime = document.querySelector('#story-time');
 const slideList = document.querySelector('#slide-list');
 const progress = document.querySelector('#progress');
 const tickerText = document.querySelector('#ticker-text');
+const footerDisclaimer = document.querySelector('#footer-disclaimer');
 const dateEl = document.querySelector('#current-date');
 const prev = document.querySelector('#prev');
 const next = document.querySelector('#next');
@@ -418,9 +419,10 @@ async function load() {
     allArticles = data.articles?.length ? data.articles : fallback;
     renderSourceOptions(data.sources || []);
 
-  } catch {
+  } catch (error) {
     allArticles = fallback;
     latestArticles = [];
+    tickerText.textContent = 'Nie udało się pobrać wiadomości. Sprawdź połączenie serwera z kanałami RSS.';
   }
 
   visibleArticles = activeFilter === 'all'
@@ -431,7 +433,17 @@ async function load() {
   restart();
 }
 
+async function loadFooter() {
+  if (!footerDisclaimer) return;
+  try {
+    const response = await fetch('/stopka.html');
+    if (response.ok) footerDisclaimer.innerHTML = await response.text();
+  } catch {
+    // The built-in disclaimer remains visible if the editable file cannot be loaded.
+  }
+}
 setDate();
+loadFooter();
 load();
 loadWeather();
 loadMarkets();

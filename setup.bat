@@ -53,7 +53,7 @@ if errorlevel 1 (
 echo Node.js:
 node --version
 echo npm:
-npm --version
+call npm --version
 echo.
 
 if not exist package.json (

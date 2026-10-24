@@ -13,7 +13,7 @@
 <body>
   <header class="site-header">
     <div class="header-inner">
-      <a class="brand" href="/" aria-label="Biały.pl"><img class="brand-logo" src="/logo-bial-pl.png" alt="Biały.pl" /></a>
+      <a class="brand" href="/" aria-label="bialystok.org.pl"><img class="brand-logo" src="/logo-bialystok-org.png" alt="bialystok.org.pl" onerror="this.onerror=null;this.src='/logo-bial-pl.png'" /></a>
       <div class="header-meta">
         <span id="current-date"></span>
         <span class="status-dot" aria-hidden="true"></span>
@@ -43,10 +43,7 @@
     <div class="ticker-text" id="ticker-text">Pobieranie najnowszych nagłówków…</div>
   </div>
 
-  <section class="ad-slot ad-slot-top" id="ad-slot-top" aria-label="Miejsce na reklamę">
-    <span class="ad-label">REKLAMA</span>
-    <span class="ad-placeholder">Miejsce na baner reklamowy</span>
-  </section>
+  <section class="ad-slot ad-slot-top" id="ad-slot-top" aria-label="Miejsce na reklamę"><iframe class="ad-frame" src="/reklama_gora.html" title="Reklama górna"></iframe></section>
 
   <main class="page">
     <section class="hero-shell" aria-label="Najnowsze wiadomości">
@@ -89,7 +86,7 @@
   </aside>
 
     <section class="weather-panel" aria-labelledby="weather-heading">
-      <div class="weather-heading-row"><div><span class="eyebrow">POGODA TERAZ</span><h2 id="weather-heading">Prognoza</h2></div><span class="weather-mark" aria-hidden="true">&#9728;</span></div>
+      <div class="weather-heading-row"><div><h2 id="weather-heading">Prognoza pogody</h2></div><span class="weather-mark" aria-hidden="true">&#9728;</span></div>
       <label class="weather-location-label" for="weather-location">Miejscowość</label>
       <select id="weather-location" class="weather-location" aria-label="Wybierz miejscowość">
         <option value="Białystok">Białystok</option>
@@ -119,7 +116,7 @@
       <small class="market-note">Kursy średnie NBP, PLN</small>
     </section>
     <section class="market-panel" aria-labelledby="crypto-heading">
-      <div class="market-heading"><h2 id="crypto-heading">Kursy kryptowalut</h2><span class="market-icon">₿</span></div>
+      <div class="market-heading"><h2 id="crypto-heading">Kryptowaluty</h2><span class="market-icon">₿</span></div>
       <div class="market-list" id="crypto-list" aria-live="polite"><span class="market-message">Ładowanie kursów...</span></div>
       <a class="market-credit" href="https://coinmarketcap.com/api/" target="_blank" rel="noopener noreferrer">Dane kryptowalutowe: CoinMarketCap</a>
     </section>
@@ -129,21 +126,18 @@
       <a class="market-credit" href="https://api.metalcharts.org/docs" target="_blank" rel="noopener noreferrer">Dane metali: MetalCharts</a>
     </section>
     <section class="market-panel" aria-labelledby="lotto-heading">
-      <div class="market-heading"><h2 id="lotto-heading">LOTTO</h2><span class="market-icon">●</span></div>
+      <div class="market-heading"><h2 id="lotto-heading">Wyniki LOTTO</h2><span class="market-icon">●</span></div>
       <div class="lotto-tabs" id="lotto-tabs" role="tablist" aria-label="Gry LOTTO"></div><div class="market-list" id="lotto-list" aria-live="polite"><span class="market-message">Ładowanie wyników...</span></div>
       <a class="market-credit" href="https://www.lotto.pl/wyniki" target="_blank" rel="noopener noreferrer">Sprawdz oficjalne wyniki LOTTO</a>
     </section>
     <section class="market-panel" aria-labelledby="fuel-heading">
-      <div class="market-heading"><h2 id="fuel-heading">Ceny paliw</h2><span class="market-icon">&#9981;</span></div>
+      <div class="market-heading"><h2 id="fuel-heading">Średnie ceny paliw</h2><span class="market-icon">&#9981;</span></div>
       <div class="market-list" id="fuel-list" aria-live="polite"><span class="market-message">Ladowanie cen...</span></div>
       <small class="market-note">Srednie ceny w Polsce, aktualizowane recznie.</small>
     </section>  </div>
 </section>
 </main>
-<section class="ad-slot ad-slot-bottom" id="ad-slot-bottom" aria-label="Miejsce na reklamę">
-  <span class="ad-label">REKLAMA</span>
-  <span class="ad-placeholder">Miejsce na baner reklamowy</span>
-</section>
+<section class="ad-slot ad-slot-bottom" id="ad-slot-bottom" aria-label="Miejsce na reklamę"><iframe class="ad-frame" src="/reklama_dol.html" title="Reklama dolna"></iframe></section>
 <footer class="site-footer" id="site-footer">
   <div class="footer-inner">
     <div class="footer-intro">
@@ -154,15 +148,15 @@
       <h2>Modu&#322;y</h2>
       <ul>
         <li>Agregacja wiadomo&#347;ci RSS</li>
-        <li>Panel pi&#281;ciu najwa&#380;niejszych historii</li>
+        <li>Top pi&#281;ciu najwa&#380;niejszych wiadomo&#347;ci</li>
         <li>Najnowsze wiadomo&#347;ci</li>
         <li>Filtry kategorii i &#378;r&oacute;de&#322;</li>
-        <li>Pogoda i prognoza 3-dniowa</li>
-        <li>Kursy walut NBP</li>
+        <li>Prognoza pogody</li>
+        <li>Kursy walut</li>
         <li>Kryptowaluty</li>
         <li>Ceny metali</li>
-        <li>R&#281;czne wyniki LOTTO</li>
-        <li>R&#281;czne &#347;rednie ceny paliw</li>
+        <li>Wyniki LOTTO</li>
+        <li>&#346;rednie ceny paliw</li>
       </ul>
     </div>
     <div class="footer-column">
@@ -183,11 +177,11 @@
     <div class="footer-column" id="footer-information">
       <h2>Informacje</h2>
       <ul>
-        <li><a href="/about.html">O portalu</a></li>
-        <li><a href="/cooperation.html">Wsp&oacute;&#322;praca</a></li>
-        <li><a href="/contact.html">Kontakt</a></li>
-        <li><a href="/privacy.html">Polityka prywatno&#347;ci</a></li>
-        <li><a href="/terms.html">Regulamin</a></li>
+        <li><a href="/oportalu.html">O portalu</a></li>
+        <li><a href="/wspolpraca.html">Wsp&oacute;&#322;praca</a></li>
+        <li><a href="/kontakt.html">Kontakt</a></li>
+        <li><a href="/polityka.html">Polityka prywatno&#347;ci</a></li>
+        <li><a href="/regulamin.html">Regulamin</a></li>
       </ul>
     </div>    <div class="footer-column">
       <h2>Kategorie</h2>
@@ -204,6 +198,7 @@
       </ul>
     </div>
   </div>
+  <div class="footer-disclaimer" id="footer-disclaimer">InfoSfera jest niezależnym agregatorem wiadomości. Nie ponosimy odpowiedzialności za treści publikowane przez zewnętrzne serwisy.</div>
 </footer>
 
   <script src="/script.js"></script>

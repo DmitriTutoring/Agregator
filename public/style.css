@@ -40,7 +40,7 @@ button, a { font: inherit; }
   letter-spacing: -.05em;
 }
 .brand span { color: var(--accent); }
-.brand-logo{display:block;width:150px;height:44px;object-fit:contain;object-position:left center}
+.brand-logo{display:block;width:220px;height:65px;object-fit:contain;object-position:left center}
 .header-meta {
   display: flex;
   align-items: center;
@@ -310,7 +310,7 @@ button, a { font: inherit; }
 @media (max-width: 620px) {
   .header-inner, .category-inner, .ticker, .page { padding-left: 14px; padding-right: 14px; }
   .brand { font-size: 22px; }
-  .brand-logo{width:132px;height:40px}
+  .brand-logo{width:180px;height:54px}
   .ticker { gap: 10px; }
   .ticker-text { font-size: 12px; }
   .hero { border-radius: 14px; min-height: 420px; }
@@ -371,3 +371,4 @@ button, a { font: inherit; }
 .latest-layout{grid-template-columns:minmax(0,1fr) 390px}
 @media(max-width:1000px){.latest-layout{grid-template-columns:minmax(0,1fr) 340px}}
 @media(max-width:760px){.latest-layout{grid-template-columns:1fr}}
+.ad-frame{display:block;width:100%;height:100%;min-height:90px;border:0;background:transparent}.footer-disclaimer{max-width:1180px;margin:0 auto;padding:0 28px 30px;color:#8793a3;font-size:11px;line-height:1.5}.footer-disclaimer p{margin:0}html[data-theme="light"] .footer-disclaimer{color:#667384}@media(max-width:760px){.ad-frame{min-height:76px}.footer-disclaimer{padding:0 18px 26px}}
